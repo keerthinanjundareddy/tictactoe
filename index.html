@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tic Tac Toe</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: white;
+      flex-direction: column;
+    }
+    #gameCanvas {
+      background-color: #fff;
+      border: 1px solid #ccc;
+    }
+    .line {
+      position: absolute;
+      background-color: #ccc;
+    }
+    .horizontal-line {
+      height: 2px;
+      width: 300px;
+    }
+    .vertical-line {
+      width: 2px;
+      height: 300px;
+    }
+    .scoreboard {
+      margin-top: 20px;
+      font-size: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 300px;
+    }
+    .score {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .play-again {
+      margin-top: 20px;
+    }
+  </style>
+  <script src="https://pixijs.download/release/pixi.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const app = new PIXI.Application({ width: 300, height: 600, background: '#fff' });
+      document.body.appendChild(app.view);
+
+      let playerOne = 'X';
+      let playerTwo = 'O';
+      let currentPlayer = playerOne;
+      let gameEnded = false;
+      let playerOnePoints = 0;
+      let playerTwoPoints = 0;
+      let tiePoints = 0;
+
+      const board = [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', '']
+      ];
+
+      const squares = [];
+
+      const scoreBoard = document.createElement('div');
+      scoreBoard.className = 'scoreboard';
+      const playerOneScore = document.createElement('div');
+      playerOneScore.className = 'score';
+      playerOneScore.innerHTML = `<span>Player X</span><span>${playerOnePoints}</span>`;
+      const playerTwoScore = document.createElement('div');
+      playerTwoScore.className = 'score';
+      playerTwoScore.innerHTML = `<span>Player O</span><span>${playerTwoPoints}</span>`;
+      const tieScore = document.createElement('div');
+      tieScore.className = 'score';
+      tieScore.innerHTML = `<span>Tie</span><span>${tiePoints}</span>`;
+      scoreBoard.appendChild(playerOneScore);
+      scoreBoard.appendChild(tieScore);
+      scoreBoard.appendChild(playerTwoScore);
+      document.body.appendChild(scoreBoard);
+
+      const playAgainButton = document.createElement('button');
+      playAgainButton.className = 'play-again';
+      playAgainButton.textContent = 'Play Again';
+      playAgainButton.addEventListener('click', resetGame);
+      document.body.appendChild(playAgainButton);
+
+      function createGame() {
+        for (let row = 0; row < 3; row++) {
+          for (let col = 0; col < 3; col++) {
+            const square = new PIXI.Graphics();
+            square.interactive = true;
+            square.buttonMode = true;
+            square.beginFill(0xf2f2f2);
+
+            square.drawRect(0, 0, 100, 100);
+            square.endFill();
+            square.position.set(col * 100, row * 100);
+
+            square.on('pointerdown', () => {
+              if (!gameEnded && board[row][col] === '') {
+                if (currentPlayer === playerTwo) return; // Prevent player move during computer's turn
+                const text = new PIXI.Text(currentPlayer, { fontSize: 80, fill: '#333' });
+                text.anchor.set(0.5);
+                text.position.set(col * 100 + 50, row * 100 + 50);
+                app.stage.addChild(text);
+                board[row][col] = currentPlayer;
+                checkWin();
+                currentPlayer = currentPlayer === playerOne ? playerTwo : playerOne;
+                if (currentPlayer === playerTwo) {
+                  setTimeout(computerMove, 1000); // 5000 milliseconds = 5 seconds delay
+                }
+              }
+            });
+
+            app.stage.addChild(square);
+            squares.push(square);
+          }
+        }
+
+        const lines = [];
+
+        for (let i = 1; i < 3; i++) {
+          // Horizontal lines
+          const horizontalLine = new PIXI.Graphics();
+          horizontalLine.beginFill(0xccc);
+          horizontalLine.drawRect(0, 0, 300, 2);
+          horizontalLine.endFill();
+          horizontalLine.position.set(0, i * 100);
+          lines.push(horizontalLine);
+
+          // Vertical lines
+          const verticalLine = new PIXI.Graphics();
+          verticalLine.beginFill(0xccc);
+          verticalLine.drawRect(0, 0, 2, 300);
+          verticalLine.endFill();
+          verticalLine.position.set(i * 100, 0);
+          lines.push(verticalLine);
+        }
+
+        lines.forEach(line => app.stage.addChild(line));
+      }
+
+      function computerMove() {
+        if (!gameEnded) {
+          let emptyCells = [];
+          for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+              if (board[row][col] === '') {
+                emptyCells.push({ row, col });
+              }
+            }
+          }
+
+          if (emptyCells.length > 0) {
+            const randomIndex = Math.floor(Math.random() * emptyCells.length);
+            const { row, col } = emptyCells[randomIndex];
+
+            const text = new PIXI.Text(currentPlayer, { fontSize: 80, fill: '#333' });
+            text.anchor.set(0.5);
+            text.position.set(col * 100 + 50, row * 100 + 50);
+            app.stage.addChild(text);
+            board[row][col] = currentPlayer;
+
+            checkWin();
+
+            currentPlayer = playerOne;
+          }
+        }
+      }
+
+      function checkWin() {
+        const winningCombinations = [
+          // Rows
+          [[0, 0], [0, 1], [0, 2]],
+          [[1, 0], [1, 1], [1, 2]],
+          [[2, 0], [2, 1], [2, 2]],
+          // Columns
+          [[0, 0], [1, 0], [2, 0]],
+          [[0, 1], [1, 1], [2, 1]],
+          [[0, 2], [1, 2], [2, 2]],
+          // Diagonals
+          [[0, 0], [1, 1], [2, 2]],
+          [[2, 0], [1, 1], [0, 2]],
+        ];
+
+        for (const combination of winningCombinations) {
+          const [row1, col1] = combination[0];
+          const [row2, col2] = combination[1];
+          const [row3, col3] = combination[2];
+          if (
+            board[row1][col1] !== '' &&
+            board[row1][col1] === board[row2][col2] &&
+            board[row1][col1] === board[row3][col3]
+          ) {
+            const line = new PIXI.Graphics();
+            line.lineStyle(4, 0xff0000);
+            line.moveTo(col1 * 100 + 50, row1 * 100 + 50);
+            line.lineTo(col3 * 100 + 50, row3 * 100 + 50);
+            app.stage.addChild(line);
+            gameEnded = true;
+            showWinningMessage(currentPlayer);
+            updateScore(currentPlayer);
+            currentPlayer = null;
+            return;
+          }
+        }
+
+        if (!gameEnded && isBoardFull()) {
+          gameEnded = true;
+          showDrawMessage();
+          updateScore('tie');
+          currentPlayer = null;
+        }
+      }
+
+      function showWinningMessage(player) {
+        const message = new PIXI.Text(`Player ${player} wins!`, { fontSize: 24, fill: '#333' });
+        message.position.set(50, 320);
+        app.stage.addChild(message);
+      }
+
+      function showDrawMessage() {
+        const message = new PIXI.Text("It's a draw!", { fontSize: 24, fill: '#333' });
+        message.position.set(60, 340);
+        app.stage.addChild(message);
+      }
+
+      function isBoardFull() {
+        for (let row = 0; row < 3; row++) {
+          for (let col = 0; col < 3; col++) {
+            if (board[row][col] === '') {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+
+      function updateScore(winner) {
+        if (winner === playerOne) {
+          playerOnePoints++;
+        } else if (winner === playerTwo) {
+          playerTwoPoints++;
+        } else {
+          tiePoints++;
+        }
+        playerOneScore.innerHTML = `<span>Player X</span><span>${playerOnePoints}</span>`;
+        playerTwoScore.innerHTML = `<span>Player O</span><span>${playerTwoPoints}</span>`;
+        tieScore.innerHTML = `<span>Tie</span><span>${tiePoints}</span>`;
+      }
+
+      function resetGame() {
+        currentPlayer = playerOne;
+        gameEnded = false;
+        playerOnePoints = 0;
+        playerTwoPoints = 0;
+        tiePoints = 0;
+        board.forEach(row => row.fill(''));
+        app.stage.removeChildren();
+        createGame();
+        playerOneScore.innerHTML = `<span>Player X</span><span>${playerOnePoints}</span>`;
+        playerTwoScore.innerHTML = `<span>Player O</span><span>${playerTwoPoints}</span>`;
+        tieScore.innerHTML = `<span>Tie</span><span>${tiePoints}</span>`;
+      }
+
+      createGame();
+    });
+  </script>
+</head>
+<body>
+</body>
+</html>
